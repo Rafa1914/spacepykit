@@ -5,7 +5,7 @@ def radec_from_r(r : Vector) -> tuple[float,float]:
     '''
     Calculates de Right Ascension and Declination for the vector r in its reference frame.
 
-    Atrribute:
+    Atrributes:
     r: Position vector
 
     Returns:
@@ -21,6 +21,15 @@ def radec_from_r(r : Vector) -> tuple[float,float]:
     return (alpha,delta)
 
 def julian_day(date:datetime) -> float:
+    '''
+    Calculate the julian day considering Boulet (1991) formulation.
+
+    Attributes:
+    date: Date and time at UTC
+
+    Returns:
+    jd: Julian day.
+    '''
     year = date.year
     month = date.month
     day = date.day
