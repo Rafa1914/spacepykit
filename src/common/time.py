@@ -1,5 +1,6 @@
 from datetime import datetime
 from src.common.utils import *
+from src.common.constants import *
 
 def julian_day(date:datetime) -> float:
     '''
@@ -38,8 +39,7 @@ def sidereal_time_greenwich_0h_seidelmann(date:datetime) -> float:
     Reference: Seidelmann, 1992 - Explanatory Supplement to the Astronomical Almanac
     '''
     j0 = julian_day_0h_boulet(date.year,date.month,date.day)
-    j2000 = julian_day(datetime(year=2000,month=1,day=1,hour=12))
-    t0 = (j0-j2000)/36525 #Centuries passed since J2000
+    t0 = (j0-J2000)/36525 #Centuries passed since J2000
     theta_g0 = 100.4606184 + 36000.77004*t0 + 0.000387933*t0**2 - 2.583e-8*t0**3 # Seidelmann, 1992 - Explanatory Supplement to the Astronomical Almanac
     return convert_angle_0_to_360_range(theta_g0)
 
