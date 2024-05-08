@@ -51,7 +51,19 @@ class Vector:
         return self._theta_z
     
     def __str__(self) -> str:
-        return f'x = {str(self.x)}\ny = {str(self.y)}\nz = {str(self.z)}\nMagnitude = {str(self.magnitude)}\nTheta_x = {np.rad2deg(self.theta_x)}\nTheta_y = {np.rad2deg(self.theta_y)}\nTheta_z = {np.rad2deg(self.theta_z)}'
+        return f'x = {str(self.x)}\ny = {str(self.y)}\nz = {str(self.z)}\nMagnitude = {str(self.magnitude)}\nTheta_x = {np.rad2deg(self.theta_x)}\nTheta_y = {np.rad2deg(self.theta_y)}\nTheta_z = {np.rad2deg(self.theta_z)}'      
+    
+    def __add__(self,other):
+        x = self.x+other.x
+        y = self.y+other.y
+        z = self.z+other.z
+        return Vector(x,y,z)
+    
+    def __sub__(self,other):
+        x = self.x-other.x
+        y = self.y-other.y
+        z = self.z-other.z
+        return Vector(x,y,z)
 
 def dot_product(a:Vector,b:Vector) -> float:
     '''

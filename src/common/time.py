@@ -6,6 +6,8 @@ def julian_day(date:datetime) -> float:
     '''
     Calculate the julian day considering Boulet (1991) formulation.
 
+    Reference: Curtis - Orbital Mechanics for Engineering Students
+
     Attributes:
     date: Date and time at UTC
 
@@ -20,6 +22,7 @@ def julian_day(date:datetime) -> float:
 def julian_day_0h_boulet(year,month,day) -> float:
     '''
     Calculate the julian day at 0h UT considering Boulet (1991) formulation.
+
     Reference: Boulet (1991) - Methods of Orbit Detemination for the Microcomputer
 
     Attributes:
@@ -36,6 +39,7 @@ def julian_day_0h_boulet(year,month,day) -> float:
 def sidereal_time_greenwich_0h_seidelmann(date:datetime) -> float:
     '''
     Calculate the sidereal time on Greenwich Meriridian for a date at 0h UT using Seidelmann (1992) formulation.
+    
     Reference: Seidelmann, 1992 - Explanatory Supplement to the Astronomical Almanac
     '''
     j0 = julian_day_0h_boulet(date.year,date.month,date.day)
@@ -46,23 +50,33 @@ def sidereal_time_greenwich_0h_seidelmann(date:datetime) -> float:
 def sidereal_time_greenwich(date:datetime) -> float:
     '''
     Calculate the sidereal time on Greenwich Meriridian for a date and time.
+
+    Reference: Curtis - Orbital Mechanics for Engineering Students
     '''
     theta_g0 = sidereal_time_greenwich_0h_seidelmann(date)
     ut = date.hour + date.minute/60 + date.second/3600
     theta_g = theta_g0 + 360.98564724*ut/24
     return convert_angle_0_to_360_range(theta_g)
 
-def sidereal_time(date:datetime,longitude:float) -> float:
+def sidereal_time(longitude:float, date:datetime = None, theta_g = None) -> float:
     '''
     Calculate the sidereal time for a longitude in a specific date and time.
+    
+    Reference: Curtis - Orbital Mechanics for Engineering Students
 
     Attributes:
-    date: Date and time at UTC
     longitude: Site's longitude [deg]
+    date: Date and time at UTC
+    theta_g: Siedereal time at Greenwich [deg]
 
     Returns:
     theta: Sidereal time [deg].
     '''
-    theta_g = sidereal_time_greenwich(date)
+    # Validation
+    if date is None and theta_g is None:
+        raise Exception('Either date or theta_g parameter must have a value.')
+    #Calculation
+    if theta_g is None:
+        theta_g = sidereal_time_greenwich(date)
     theta = theta_g + longitude
     return convert_angle_0_to_360_range(theta)
