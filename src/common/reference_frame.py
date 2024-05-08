@@ -55,7 +55,7 @@ def get_topocentric_origin(longitude:float,latitude:float,altitude:float,date:da
     theta_g: Sidereal time at Greenwich [deg] 
 
     Returns:
-    The relative position vector of the origin in equatorial geocentri reference frame.
+    The relative position vector of the origin in equatorial geocentric reference frame.
     '''
     # Validation
     if date is None and theta_g is None:
