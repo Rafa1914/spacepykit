@@ -95,3 +95,15 @@ def find_angle_between(a:Vector,b:Vector) -> float:
     '''
     theta = np.arccos(dot_product(a,b)/(a.magnitude*b.magnitude))
     return theta
+
+def versor_from_radec(ra:float,dec:float) -> Vector:
+    '''
+    Calculate the versor with respect to its right ascension (RA) and declination (DEC) angles.
+
+    Attributes:
+    ra: Right ascension [deg]
+    dec: Declination [deg]
+    '''
+    ra = np.deg2rad(ra)
+    dec = np.deg2rad(dec)
+    return Vector(x = np.cos(dec)*np.cos(ra),y=np.cos(dec)*np.sin(ra),z = np.sin(dec))
