@@ -41,7 +41,14 @@ def get_geodetic_latitude(latitude:float) -> float:
     geodetic_latitude = np.arctan(np.tan(phi)*(1-f)**2)
     return geodetic_latitude
 
-def get_topocentric_origin(longitude:float,latitude:float,altitude:float,date:datetime = None,theta_g: float = None) -> Vector:
+def get_topocentric_origin(
+        latitude:float,
+        altitude:float,
+        date:datetime = None,
+        theta_g: float = None,
+        longitude:float = None,
+        theta:float = None,
+        is_geocentric_latitude:bool = True) -> Vector:
     '''
     Get the topocentric coordinate system origin in the equatorial geocentric reference frame.
 
@@ -58,15 +65,18 @@ def get_topocentric_origin(longitude:float,latitude:float,altitude:float,date:da
     The relative position vector of the origin in equatorial geocentric reference frame.
     '''
     # Validation
-    if date is None and theta_g is None:
-        raise Exception('Either date or theta_g parameter must have a value.')
+    if theta is None:
+        if longitude is None:
+            raise Exception('Either (longitude or sidereal_time) parameter must have a value.')        
+        if (date is None and theta_g is None):
+            raise Exception('Either (date or theta_g) parameter must have a value.')
     # Calculation
     f = EARTH_OBLATENESS
     r_e = EARTH_RADIUS
-    phi = get_geodetic_latitude(latitude)
+    phi = get_geodetic_latitude(latitude) if is_geocentric_latitude else np.deg2rad(latitude)
     r_phi = r_e/(np.sqrt(1-(2-f)*f*(np.sin(phi))**2)) # Seidelmann, P.K., 1992. Explanatory Supplement to the Astronomical Almanac
     r_c = r_phi + altitude
     r_s = np.power(1-f,2)*r_phi + altitude
-    theta = np.deg2rad(sidereal_time(longitude=longitude,theta_g=theta_g,date=date))
+    theta = np.deg2rad(sidereal_time(longitude=longitude,theta_g=theta_g,date=date)) if theta is None else np.deg2rad(theta)
     r = Vector(x = r_c*np.cos(phi)*np.cos(theta), y = r_c*np.cos(phi)*np.sin(theta), z = r_s*np.sin(phi))
     return r
