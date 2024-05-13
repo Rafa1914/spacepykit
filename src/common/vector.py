@@ -64,6 +64,9 @@ class Vector:
         y = self.y-other.y
         z = self.z-other.z
         return Vector(x,y,z)
+    
+    def __mul__(self,other : float):
+        return Vector(self.x*other,self.y*other,self.z*other)
 
 def dot_product(a:Vector,b:Vector) -> float:
     '''
