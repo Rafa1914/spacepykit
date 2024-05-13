@@ -67,6 +67,6 @@ def get_topocentric_origin(longitude:float,latitude:float,altitude:float,date:da
     r_phi = r_e/(np.sqrt(1-(2-f)*f*(np.sin(phi))**2)) # Seidelmann, P.K., 1992. Explanatory Supplement to the Astronomical Almanac
     r_c = r_phi + altitude
     r_s = np.power(1-f,2)*r_phi + altitude
-    theta = np.deg2rad(sidereal_time(longitude=longitude,theta_g=theta_g))
+    theta = np.deg2rad(sidereal_time(longitude=longitude,theta_g=theta_g,date=date))
     r = Vector(x = r_c*np.cos(phi)*np.cos(theta), y = r_c*np.cos(phi)*np.sin(theta), z = r_s*np.sin(phi))
     return r
