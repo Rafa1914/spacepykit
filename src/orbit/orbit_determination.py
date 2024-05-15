@@ -14,6 +14,7 @@ def r2v2_from_angles_only_gauss(
     '''
     Perform the Gauss angles-only method to provide the position and velocity vectors at second observation
     in a three set observation.
+    Reference: Curtis - Orbital Mechanics for Engineering Students
 
     Attributes:
         latitude_geodetic: Site's geodetic latitude [deg]
@@ -100,3 +101,60 @@ def r2v2_from_angles_only_gauss(
     #Velocity:
     v2 = (r[2]*f1 - r[0]*f3)*((f1*g3-f3*g1)**(-1))
     return (r[1],v2)
+
+def classic_orbital_elements_from_rv(r:Vector,v:Vector) -> tuple[float,float,float,float,float,float]:
+    '''
+    From the state vector, get the classical orbital elements for the object's orbit.
+    Reference: Curtis - Orbital Mechanics for Engineering Students
+
+    Attributes:
+    r: Position vector [km]
+    v: Velocity vector [km/s]
+
+    Returns:
+    h: Specific angular moment [km2/s]
+    i: Inclination [deg]
+    ra_ascending_node: Rigth ascension of the ascending node [deg]
+    e: Eccentricity [-]
+    w: Argument of perigee [deg]
+    theta: True anomaly [deg]
+    '''
+    v_r = dot_product(r,v)/r.magnitude              # Radial Velocity [km/s]
+    h_vector = cross_product(r,v)                   # Specific angular momentum vector
+    i = np.arccos(h_vector.z/h_vector.magnitude)    # Inclination
+    N = cross_product(Vector(x=0,y=0,z=1),h_vector) # Node line vector
+    e_vector = (r*(v.magnitude**2-EARTH_GRAVITATIONAL_PARAMETER/r.magnitude)-v*r.magnitude*v_r)*(1/EARTH_GRAVITATIONAL_PARAMETER) # Eccentricity vector
+    # Rigth ascension of the ascending node
+    if N.y >= 0:
+        ra_ascending_node = np.arccos(N.x/N.magnitude,)
+    else:
+        ra_ascending_node = 2*np.pi - np.arccos(N.x/N.magnitude)    
+    # Argument of perigee
+    if e_vector.z >= 0:
+        w = np.arccos(dot_product(N,e_vector)/(N.magnitude*e_vector.magnitude))
+    else:
+        w = 2*np.pi - np.arccos(dot_product(N,e_vector)/(N.magnitude*e_vector.magnitude))
+    #True anomaly
+    if v_r >= 0:
+        theta = np.arccos(dot_product(e_vector,r)/(e_vector.magnitude*r.magnitude))
+    else:
+        theta = 2*np.pi - np.arccos(dot_product(e_vector,r)/(e_vector.magnitude*r.magnitude))
+    return(h_vector.magnitude,np.rad2deg(i),np.rad2deg(ra_ascending_node),e_vector.magnitude,np.rad2deg(w),np.rad2deg(theta))
+
+def semimajor_axis_from_he(h:float,e:float) -> float:
+    '''
+    Get the semimajor axis for an elliptical orbit from its specific angular moment and eccentricity.
+    Reference: Curtis - Orbital Mechanics for Engineering Students
+
+    Attributes:
+    h: Specific angular momentum [km^2/s]
+    e: Eccentricity
+
+    Returns:
+    a: Semimajor axis [km]
+    '''
+    mu = EARTH_GRAVITATIONAL_PARAMETER
+    rp = (pow(h,2)/mu)*(1/(1+e))
+    ra = (pow(h,2)/mu)*(1/(1-e))
+    a = 0.5*(rp+ra)
+    return a
