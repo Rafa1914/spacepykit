@@ -48,4 +48,27 @@ def find_universal_anomaly(dt:float,r:float,vr:float,a:float) -> float:
     f = lambda x : (r*vr*pow(x,2)*stumpff_C(alpha*pow(x,2)))/mu_sqrt + (1-alpha*r)*pow(x,3)*stumpff_S(alpha*pow(x,2)) + r*x - dt*mu_sqrt
     x0 = mu_sqrt*np.abs(alpha)*dt
     x = fsolve(f,x0)
-    return x
+    return x[0]
+
+def coefs_lagrange_from_x(x:float,r:float,dt:float,alpha:float) -> tuple[float,float]:
+    '''
+    Calculates de Lagrange's coefficients from the universal anomaly.
+    The coefficients are the f and g of the expression: 
+    r(t-t0) = f*r0 + g*v0
+    Reference: Curtis - Orbital Mechanics for Engineering Students
+
+    Attributes:
+    x: Universal anomaly [km^1/2]
+    r: Magnitude of r0 [km]
+    dt: Time interval since t0
+    alpha: Reciproc of the semimajor axis [km^-1]
+
+    Returns:
+    f: Coefficient [-]
+    g: Coefficient [s]
+    '''
+    f = 1 - pow(x,2)*stumpff_C(alpha*pow(x,2))/r
+    mu_sqrt = np.sqrt(EARTH_GRAVITATIONAL_PARAMETER)
+    g = dt - pow(x,3)*stumpff_S(alpha*pow(x,2))/mu_sqrt
+    return (f,g)
+
