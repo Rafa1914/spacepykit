@@ -4,14 +4,7 @@ from src.common.constants import *
 from src.orbit.orbit import *
 import numpy.polynomial.polynomial as poly
 
-
-def r2v2_from_angles_only_gauss(
-        latitude_geodetic:float,
-        altitude:float,
-        local_sidereal_times:list[float],
-        RAs:list[float],
-        DECs:list[float],
-        times:list[float]) -> tuple[Vector,Vector]:
+def r2v2_from_angles_only_gauss(latitude_geodetic:float,altitude:float,local_sidereal_times:list[float],RAs:list[float],DECs:list[float],times:list[float],perform_improvement:bool = True) -> tuple[Vector,Vector]:
     '''
     Perform the Gauss angles-only method to provide the position and velocity vectors at second observation
     in a three set observation.
@@ -28,6 +21,36 @@ def r2v2_from_angles_only_gauss(
     Returns:
         r2: Object's position vector on Geocentrical equatorial reference frame at second observation [km]
         v2: Object's velocity vector on Geocentrical equatorial reference frame at second observation [km/s]
+    '''
+    r2,v2,R,rho,[f1,g1,f3,g3],D0,D = r2v2_from_angles_only_gauss_core(latitude_geodetic,altitude,local_sidereal_times,RAs,DECs,times)
+    
+    if perform_improvement:
+        r2,v2 = improve_r2v2_from_gauss_angles_only(r2,v2,R,rho,f1,g1,f3,g3,D0,D,times)
+    
+    return (r2,v2)
+
+def r2v2_from_angles_only_gauss_core(latitude_geodetic:float,altitude:float,local_sidereal_times:list[float],RAs:list[float],DECs:list[float],times:list[float]) -> tuple[Vector,Vector,list[Vector],list[Vector],list[float],float,list[list]]:
+    '''
+    Perform the Gauss angles-only core method to provide an initial estimation of the position and velocity vectors at second observation
+    in a three set observation.
+    Reference: Curtis - Orbital Mechanics for Engineering Students
+
+    Attributes:
+        latitude_geodetic: Site's geodetic latitude [deg]
+        altitude: Site's altitude [km]
+        local_sidereal_times: Site's sidereal local times of observation [deg]
+        RAs: Right ascension angles from observation [deg]
+        DECs: Declination angles from observation [deg]
+        times: Times of observation
+    
+    Returns:
+        r2: Object's position vector on Geocentrical Equatorial Reference Frame at second observation [km]
+        v2: Object's velocity vector on Geocentrical Equatorial Reference Frame at second observation [km/s]
+        R: Origin of Topocentric Equatorial Reference Frame at each observation [km]
+        rho: Object's position vector on Topocentric Equatorial Reference Frame at each observation [km]
+        [f1,g1,f3,g3]: Lagrange's estimated coefficients
+        D0: Auxiliary Constant
+        D: Auxiliary Matrix
     '''
     R = []           #Topocentric reference frame origin 
     versor_rho = []  #Relative position versor
@@ -101,57 +124,8 @@ def r2v2_from_angles_only_gauss(
 
     #Velocity:
     v2 = (r[2]*f1 - r[0]*f3)*((f1*g3-f3*g1)**(-1))
-
-    #Improvement of r2,v2:
-    diff1 = 1
-    diff2 = 1
-    diff3 = 1
-    n = 0
-    n_max = 1000
-    tol = 1e-8
-
-    while (diff1 > tol) and (diff2 > tol) and (diff3 > tol) and (n < n_max):
-        n = n + 1
-        rho1_old = rho1_mod
-        rho2_old = rho2_mod
-        rho3_old = rho3_mod
-        f1_old = f1
-        f3_old = f3
-        g1_old = g1
-        g3_old = g3
-        alpha = (2/r[1].magnitude) - pow(v2.magnitude,2)/EARTH_GRAVITATIONAL_PARAMETER
-        vr = dot_product(v2,r[1])/r[1].magnitude
-        x1 = find_universal_anomaly(tau_1,r[1].magnitude,vr,1/alpha)
-        x3 = find_universal_anomaly(tau_3,r[1].magnitude,vr,1/alpha)
-        f1,g1 = coefs_lagrange_from_x(x1,r[1].magnitude,tau_1,alpha)
-        f3,g3 = coefs_lagrange_from_x(x3,r[1].magnitude,tau_3,alpha)
-        f1 = (f1+f1_old)/2
-        f3 = (f3+f3_old)/2
-        g1 = (g1+g1_old)/2
-        g3 = (g3+g3_old)/2
-        c1 = g3/(f1*g3-f3*g1)
-        c3 = -g1/(f1*g3-f3*g1)
-
-        rho1_mod = (1/D0)*(-D[0][0] + (1/c1)*D[1][0] - (c3/c1)*D[2][1])
-        rho2_mod = (1/D0)*(-c1*D[0][1] + D[1][1] - c3*D[2][1])
-        rho3_mod = (1/D0)*((-c1/c3)*D[0][2] + (1/c3)*D[1][2] - D[2][2])
-
-        rho1_mod = ((6*(D[2][0]*tau_1/tau_3 + D[1][0]*tau/tau_3)*r2_star**3 + mu*D[2][0]*(tau**2-tau_1**2)*tau_1/tau_3)/(6*r2_star**3 + mu*(tau**2-tau_3**2))-D[0][0])/D0
-        rho2_mod = A + mu*B/(r2_star**3)
-        rho3_mod = ((6*(D[0][2]*tau_3/tau_1 - D[1][2]*tau/tau_1)*r2_star**3 + mu*D[0][2]*(tau**2-tau_3**2)*tau_3/tau_1)/(6*r2_star**3 + mu*(tau**2-tau_1**2))-D[2][2])/D0
-        rho_mod = [rho1_mod,rho2_mod,rho3_mod]
-        rho = []
-        for i in range(0,3):
-            rho.append(Vector(x = rho_mod[i]*versor_rho[i].x, y = rho_mod[i]*versor_rho[i].y, z = rho_mod[i]*versor_rho[i].z))
-        r = [] #Position vector on geocentrical equatorial reference frame
-        for i in range(0,3):
-            r.append(R[i]+rho[i])
-        v2 = (r[2]*f1 - r[0]*f3)*((f1*g3-f3*g1)**(-1))
-        diff1 = np.abs(rho1_mod - rho1_old)
-        diff2 = np.abs(rho2_mod - rho2_old)
-        diff3 = np.abs(rho3_mod - rho3_old)
         
-    return (r[1],v2)
+    return (r[1],v2,R,rho,[f1,g1,f3,g3],D0,D)
 
 def classic_orbital_elements_from_rv(r:Vector,v:Vector) -> tuple[float,float,float,float,float,float]:
     '''
@@ -210,12 +184,62 @@ def semimajor_axis_from_he(h:float,e:float) -> float:
     a = 0.5*(rp+ra)
     return a
 
-def improve_r2v2_from_gauss_angles_only(r2:Vector,v2:Vector,dt1:float,dt3:float,D:list[list]) -> tuple[Vector,Vector]:
-    alpha = (2/r2.magnitude) - pow(v2.magnitude,2)/EARTH_GRAVITATIONAL_PARAMETER
-    vr = dot_product(v2,r2)/r2.magnitude
-    x1 = find_universal_anomaly(dt1,r2.magnitude,vr,1/alpha)
-    x3 = find_universal_anomaly(dt3,r2.magnitude,vr,1/alpha)
-    f1,g1 = coefs_lagrange_from_x(x1,r2.magnitude,dt1,alpha)
-    f3,g3 = coefs_lagrange_from_x(x3,r2.magnitude,dt3,alpha)
-    c1 = g3/(f1*g3-f3*g1)
-    c3 = -g1/(f1*g3-f3*g1)
+def improve_r2v2_from_gauss_angles_only(r2:Vector,v2:Vector,R:list[Vector],rho:list[Vector],f1:float,g1:float,f3:float,g3:float,D0:float,D:list[list],t:list[float]) -> tuple[Vector,Vector]:
+    #Time's interval:
+    tau_1 = t[0]-t[1]
+    tau_3 = t[2]-t[1]
+
+    # Improvement of r2,v2:
+    diff = [1,1,1]
+    n = 0
+    n_max = 1000
+    tol = 1e-8
+
+    while (max(diff) > tol) and (n < n_max):
+        # Iteration's number control:
+        n = n + 1
+
+        # Old parameters:
+        rho_old = list(rho)
+        f1_old = f1
+        f3_old = f3
+        g1_old = g1
+        g3_old = g3
+
+        # Initial Constants
+        alpha = (2/r2.magnitude) - pow(v2.magnitude,2)/EARTH_GRAVITATIONAL_PARAMETER
+        vr = dot_product(v2,r2)/r2.magnitude
+        x1 = find_universal_anomaly(tau_1,r2.magnitude,vr,alpha)
+        x3 = find_universal_anomaly(tau_3,r2.magnitude,vr,alpha)
+        f1,g1 = lagrange_f_and_g_from_x(x1,r2.magnitude,tau_1,alpha)
+        f3,g3 = lagrange_f_and_g_from_x(x3,r2.magnitude,tau_3,alpha)
+        f1 = (f1+f1_old)/2
+        f3 = (f3+f3_old)/2
+        g1 = (g1+g1_old)/2
+        g3 = (g3+g3_old)/2
+        c1 = g3/(f1*g3-f3*g1)
+        c3 = -g1/(f1*g3-f3*g1)
+
+        # Obtaining the new rhos:
+        rho1_mod = (1/D0)*(-D[0][0] + (1/c1)*D[1][0] - (c3/c1)*D[2][0])
+        rho2_mod = (1/D0)*(-c1*D[0][1] + D[1][1] - c3*D[2][1])
+        rho3_mod = (1/D0)*((-c1/c3)*D[0][2] + (1/c3)*D[1][2] - D[2][2])        
+        rho_mod = [rho1_mod,rho2_mod,rho3_mod]
+        rho = []
+        for i in range(0,3):
+            rho.append(Vector(x = rho_mod[i]*rho_old[i].x/rho_old[i].magnitude, y = rho_mod[i]*rho_old[i].y/rho_old[i].magnitude, z = rho_mod[i]*rho_old[i].z/rho_old[i].magnitude))
+        
+        # Obatinig the new position's vector on geocentrical equatorial reference frame:
+        r = []
+        for i in range(0,3):
+            r.append(R[i]+rho[i])
+
+        # Obtaining the new state vector:
+        r2 = r[1]
+        v2 = (r[2]*f1 - r[0]*f3)*((f1*g3-f3*g1)**(-1))
+
+        # Verifying if the loop is over:
+        diff = []
+        for i in range(0,3):
+            diff.append(abs(rho_old[i].magnitude - rho[i].magnitude))
+    return r2,v2
