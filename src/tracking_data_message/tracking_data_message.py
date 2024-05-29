@@ -83,11 +83,12 @@ def get_radec_from_fits(filename:string,output_path:string,wcs:WCS):
     streak.detect()
 
     if len(streak.streaks) > 0:
-        columns = ['Index','X_min','Y_min','X_max','Y_max','RA_min','RA_max','DEC_min','DEC_max','Coef. Angular','Theta','Connectivity','Interception','Perimeter','Shape Factor','Custom Factor']
-
-        satellites_df = pd.DataFrame(columns=columns)
+        
 
         satellite_list = streak.streaks
+
+        # Getting DataFrame data
+        data = []
         for satellite in satellite_list:
             x_min = satellite['x_min']
             y_min = satellite['y_min']
@@ -123,8 +124,15 @@ def get_radec_from_fits(filename:string,output_path:string,wcs:WCS):
                 'Perimeter': perimeter,
                 'Shape Factor': shape_factor,
                 'Custom Factor': perimeter/shape_factor
-                }
-            satellites_df = satellites_df._append(new_row, ignore_index=True)
+                }            
+            data.append(new_row)
+
+            # satellites_df = satellites_df._append(new_row, ignore_index=True)
+        
+        # Creating de DataFrame
+        columns = ['Index','X_min','Y_min','X_max','Y_max','RA_min','RA_max','DEC_min','DEC_max','Coef. Angular','Theta','Connectivity','Interception','Perimeter','Shape Factor','Custom Factor']
+
+        satellites_df = pd.DataFrame(columns=columns,data = data)
 
         #Identificação da linha com melhor razão entre comprimento e área
         factor_max = (satellites_df['Custom Factor']).max()
