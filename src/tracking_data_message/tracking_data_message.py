@@ -14,12 +14,13 @@ import os
 
 from astropy.wcs import WCS
 
-def get_wcs_from_fits(filename: string) -> WCS:
+def get_wcs_from_fits(filename: string, fov_parameter: float = 1.2) -> WCS:
     '''
     Calculates the World Coordinate System for a FITS image using plate solving.
 
     Attributes:
     filename: FITS file's name
+    fov_parameter: Multiplicator of FOV (Default is 1.2)
     '''
 
     # Open some FITS image
@@ -47,7 +48,7 @@ def get_wcs_from_fits(filename: string) -> WCS:
     fov = np.max(shape) * pixel.to(u.deg)
 
     # Obtendo as estrelas do GAIA
-    all_radecs = gaia_radecs(center_header, 1.2 * fov, circular = True)
+    all_radecs = gaia_radecs(center_header, fov_parameter * fov, circular = False)
 
     # we only keep stars 0.01 degree apart from each other
     all_radecs = sparsify(all_radecs, 0.01)
@@ -58,25 +59,21 @@ def get_wcs_from_fits(filename: string) -> WCS:
 
 
 
-def get_radec_from_fits(filename:string,output_path:string,wcs:WCS):
+def get_radec_from_fits(filename:string,output_path:string,wcs:WCS,contour_threshold: float = 3.0):
     
     # Open some FITS image
     image_name = filename
     hdu_list = fits.open(image_name) #Header Data Unit
     img_header = hdu_list[0].header
-    img_data = hdu_list[0].data
     
     #Definição de parâmetros iniciais:
-    contour_threshold = 2.5
     connectivity_angle = 8.0
-    remove_bkg = 'map'
 
     # Read a fits image and create a Streak instance.
     streak = Streak(
         filename = filename, 
         contour_threshold = contour_threshold, 
         connectivity_angle = connectivity_angle, 
-        remove_bkg=remove_bkg
         )
 
     # Detect streaks.
