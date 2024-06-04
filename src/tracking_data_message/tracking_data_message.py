@@ -10,7 +10,6 @@ from src.astrophotometry import compute_wcs
 from src.astride import Streak
 import pandas as pd
 import datetime
-import os
 
 from astropy.wcs import WCS
 
@@ -97,36 +96,9 @@ def get_radec_from_fits(
 
         # Unifying the streaks
         mvp_streak = get_unique_streak(satellites_df)
-        
-        # Informações de Tempo
-        initial_time = datetime.datetime.strptime(
-            img_header["S_EXP"], "%Y-%m-%dT%H:%M:%S.%f"
-        )
-        interval = img_header["EXPTIME"]
-        final_time = initial_time + datetime.timedelta(seconds=interval)
 
-        # Resultados da análise
-        columns_results = ["Time", "RA[deg]", "DEC[deg]"]
-        initial_obs = {
-            "Time": initial_time.strftime("%Y-%m-%dT%H:%M:%S.%f"),
-            "RA[deg]": mvp_streak["RA_max"].values[0],
-            "DEC[deg]": mvp_streak["DEC_max"].values[0],
-        }
-
-        final_obs = {
-            "Time": final_time.strftime("%Y-%m-%dT%H:%M:%S.%f"),
-            "RA[deg]": mvp_streak["RA_min"].values[0],
-            "DEC[deg]": mvp_streak["DEC_min"].values[0],
-        }
-
-        # Escrevendo em um arquivo
-        with open(output_path, "a") as file:
-            file.write(f'ANGLE_1 = {initial_obs["Time"]} {initial_obs["RA[deg]"]}\n')
-            file.write(f'ANGLE_2 = {initial_obs["Time"]} {initial_obs["DEC[deg]"]}\n')
-            file.write(f"\n")
-            file.write(f'ANGLE_1 = {final_obs["Time"]} {final_obs["RA[deg]"]}\n')
-            file.write(f'ANGLE_2 = {final_obs["Time"]} {final_obs["DEC[deg]"]}\n')
-            file.write(f"\n")
+        # Writing the results
+        write_results(img_header,mvp_streak,output_path)
 
 
 def create_satellite_streaks_dataframe(streak: Streak, wcs: WCS) -> pd.DataFrame:
@@ -181,7 +153,7 @@ def get_unique_streak(streaks: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Streak unifyied
     """
-    
+
     # Identify the streak with a better perimeter to area ratio
     factor_max = (streaks["Custom Factor"]).max()
     filter = streaks["Custom Factor"] == factor_max
@@ -216,3 +188,42 @@ def get_unique_streak(streaks: pd.DataFrame) -> pd.DataFrame:
                     mvp_streak["Perimeter"] + satellite["Perimeter"]
                 )
     return mvp_streak
+
+
+def write_results(img_header,mvp_streak:pd.DataFrame,output_path:string):
+    """Write the results of the process
+
+    Args:
+        img_header (_type_): FITS Image header analysed
+        mvp_streak (pd.DataFrame): Unifyied streak detected
+        output_path (string): Path of the result file
+    """
+    
+    # Time info
+    initial_time = datetime.datetime.strptime(
+        img_header["S_EXP"], "%Y-%m-%dT%H:%M:%S.%f"
+    )
+    interval = img_header["EXPTIME"]
+    final_time = initial_time + datetime.timedelta(seconds=interval)
+
+    # Analysis result
+    initial_obs = {
+        "Time": initial_time.strftime("%Y-%m-%dT%H:%M:%S.%f"),
+        "RA[deg]": mvp_streak["RA_max"].values[0],
+        "DEC[deg]": mvp_streak["DEC_max"].values[0],
+    }
+
+    final_obs = {
+        "Time": final_time.strftime("%Y-%m-%dT%H:%M:%S.%f"),
+        "RA[deg]": mvp_streak["RA_min"].values[0],
+        "DEC[deg]": mvp_streak["DEC_min"].values[0],
+    }
+
+    # Writing the file
+    with open(output_path, "a") as file:
+        file.write(f'ANGLE_1 = {initial_obs["Time"]} {initial_obs["RA[deg]"]}\n')
+        file.write(f'ANGLE_2 = {initial_obs["Time"]} {initial_obs["DEC[deg]"]}\n')
+        file.write(f"\n")
+        file.write(f'ANGLE_1 = {final_obs["Time"]} {final_obs["RA[deg]"]}\n')
+        file.write(f'ANGLE_2 = {final_obs["Time"]} {final_obs["DEC[deg]"]}\n')
+        file.write(f"\n")
