@@ -95,40 +95,9 @@ def get_radec_from_fits(
         # Getting DataFrame data
         satellites_df = create_satellite_streaks_dataframe(streak, wcs)
 
-        # Identificação da linha com melhor razão entre comprimento e área
-        factor_max = (satellites_df["Custom Factor"]).max()
-        filter = satellites_df["Custom Factor"] == factor_max
-        mvp_streak = satellites_df[filter]
-
-        # ay+bx+c = 0
-        b = mvp_streak["Coef. Angular"]
-        c = mvp_streak["Interception"]
-        a = -1
-
-        for index, satellite in satellites_df[~filter].iterrows():
-            tolerancia = 10.0  # Distância máxima em pixel
-            x_center = (satellite["X_max"] + satellite["X_min"]) * 0.5
-            y_center = (satellite["Y_max"] + satellite["Y_min"]) * 0.5
-            # Distância
-            d = np.abs(a * y_center + b * x_center + c) / np.sqrt(a**2 + b**2)
-            if d.values[0] < tolerancia:
-                if satellite["Index"] > mvp_streak["Index"].values[0]:
-                    mvp_streak["X_max"] = satellite["X_max"]
-                    mvp_streak["Y_max"] = satellite["Y_max"]
-                    mvp_streak["RA_max"] = satellite["RA_max"]
-                    mvp_streak["DEC_max"] = satellite["DEC_max"]
-                    mvp_streak["Perimeter"] = (
-                        mvp_streak["Perimeter"] + satellite["Perimeter"]
-                    )
-                else:
-                    mvp_streak["X_min"] = satellite["X_min"]
-                    mvp_streak["Y_min"] = satellite["Y_min"]
-                    mvp_streak["RA_min"] = satellite["RA_min"]
-                    mvp_streak["DEC_min"] = satellite["DEC_min"]
-                    mvp_streak["Perimeter"] = (
-                        mvp_streak["Perimeter"] + satellite["Perimeter"]
-                    )
-
+        # Unifying the streaks
+        mvp_streak = get_unique_streak(satellites_df)
+        
         # Informações de Tempo
         initial_time = datetime.datetime.strptime(
             img_header["S_EXP"], "%Y-%m-%dT%H:%M:%S.%f"
@@ -201,3 +170,49 @@ def create_satellite_streaks_dataframe(streak: Streak, wcs: WCS) -> pd.DataFrame
     # Creating de DataFrame
     df = pd.DataFrame(columns=list(new_row.keys()), data=data)
     return df
+
+
+def get_unique_streak(streaks: pd.DataFrame) -> pd.DataFrame:
+    """Unify the streaks detected in the image
+
+    Args:
+        streaks (pd.DataFrame): Streaks detected in the image
+
+    Returns:
+        pd.DataFrame: Streak unifyied
+    """
+    
+    # Identify the streak with a better perimeter to area ratio
+    factor_max = (streaks["Custom Factor"]).max()
+    filter = streaks["Custom Factor"] == factor_max
+    mvp_streak = streaks[filter]
+
+    # ay+bx+c = 0
+    b = mvp_streak["Coef. Angular"]
+    c = mvp_streak["Interception"]
+    a = -1
+
+    for index, satellite in streaks[~filter].iterrows():
+        tolerancia = 10.0  # Distância máxima em pixel
+        x_center = (satellite["X_max"] + satellite["X_min"]) * 0.5
+        y_center = (satellite["Y_max"] + satellite["Y_min"]) * 0.5
+        # Distância
+        d = np.abs(a * y_center + b * x_center + c) / np.sqrt(a**2 + b**2)
+        if d.values[0] < tolerancia:
+            if satellite["Index"] > mvp_streak["Index"].values[0]:
+                mvp_streak["X_max"] = satellite["X_max"]
+                mvp_streak["Y_max"] = satellite["Y_max"]
+                mvp_streak["RA_max"] = satellite["RA_max"]
+                mvp_streak["DEC_max"] = satellite["DEC_max"]
+                mvp_streak["Perimeter"] = (
+                    mvp_streak["Perimeter"] + satellite["Perimeter"]
+                )
+            else:
+                mvp_streak["X_min"] = satellite["X_min"]
+                mvp_streak["Y_min"] = satellite["Y_min"]
+                mvp_streak["RA_min"] = satellite["RA_min"]
+                mvp_streak["DEC_min"] = satellite["DEC_min"]
+                mvp_streak["Perimeter"] = (
+                    mvp_streak["Perimeter"] + satellite["Perimeter"]
+                )
+    return mvp_streak
