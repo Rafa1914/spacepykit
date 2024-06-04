@@ -1,17 +1,14 @@
 import string
-from astropy.io import fits
-from src.astrophotometry import find_peaks
 import numpy as np
-from astropy import units as u
-from astropy.coordinates import SkyCoord
-from src.astrophotometry import gaia_radecs
-from src.astrophotometry.geometry import sparsify
-from src.astrophotometry import compute_wcs
-from src.astride import Streak
 import pandas as pd
 import datetime
-
+from astropy import units as u
+from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+from src.astrophotometry import find_peaks, gaia_radecs, compute_wcs
+from src.astrophotometry.geometry import sparsify
+from src.astride import Streak
 
 
 def get_wcs_from_fits(filename: string, fov_parameter: float = 1.2) -> WCS:
@@ -98,7 +95,7 @@ def get_radec_from_fits(
         mvp_streak = get_unique_streak(satellites_df)
 
         # Writing the results
-        write_results(img_header,mvp_streak,output_path)
+        write_results(img_header, mvp_streak, output_path)
 
 
 def create_satellite_streaks_dataframe(streak: Streak, wcs: WCS) -> pd.DataFrame:
@@ -190,7 +187,7 @@ def get_unique_streak(streaks: pd.DataFrame) -> pd.DataFrame:
     return mvp_streak
 
 
-def write_results(img_header,mvp_streak:pd.DataFrame,output_path:string):
+def write_results(img_header, mvp_streak: pd.DataFrame, output_path: string):
     """Write the results of the process
 
     Args:
@@ -198,7 +195,7 @@ def write_results(img_header,mvp_streak:pd.DataFrame,output_path:string):
         mvp_streak (pd.DataFrame): Unifyied streak detected
         output_path (string): Path of the result file
     """
-    
+
     # Time info
     initial_time = datetime.datetime.strptime(
         img_header["S_EXP"], "%Y-%m-%dT%H:%M:%S.%f"
