@@ -224,3 +224,97 @@ def write_results(img_header, mvp_streak: pd.DataFrame, output_path: string):
         file.write(f'ANGLE_1 = {final_obs["Time"]} {final_obs["RA[deg]"]}\n')
         file.write(f'ANGLE_2 = {final_obs["Time"]} {final_obs["DEC[deg]"]}\n')
         file.write(f"\n")
+
+
+def read_tdm(filename: string) -> pd.DataFrame:
+    """Read the TDM and get RA and DEC data
+
+    Args:
+        filename (string): TDM's filename
+
+    Returns:
+        pd.DataFrame: Data frame with Time, RA and DEC data
+    """
+
+    # Open the TDM file
+    file = open(filename, "r")
+    lines = file.readlines()
+    break_lines = lines.count("\n")
+
+    # Removing '\n'
+    for i in range(break_lines):
+        lines.remove("\n")
+
+    # Initializing lists
+    time_utc_list = list()
+    time_seconds_list = []
+    ra = list()
+    dec = list()
+
+    # Getting data
+    for i, line in enumerate(lines):
+        line = line.replace("\n", "").replace("=", "")
+        lines[i] = line
+        splitted_line = line.split(" ")
+        time_utc = datetime.strptime(splitted_line[2], "%Y-%m-%dT%H:%M:%S.%f")
+        time_seconds = time_utc.timestamp()
+        if time_utc_list.count(time_utc) == 0:
+            time_utc_list.append(time_utc)
+            time_seconds_list.append(time_seconds)
+        if splitted_line[0] == "ANGLE_1":
+            ra.append(float(splitted_line[3]))
+        else:
+            dec.append(float(splitted_line[3]))
+
+    data = {
+        "Tempo (UTC)": time_utc_list,
+        "Tempo[s]": time_seconds_list,
+        "RA[deg]": ra,
+        "DEC[deg]": dec,
+    }
+
+    df = pd.DataFrame(data=data)
+    return df
+
+
+def fit_radec_tdm_data(raw_data: pd.DataFrame, poly_degree: int):
+    # Interpolação dos dados de 1.2 FOV:
+    poly_ra = np.polynomial.polynomial.Polynomial.fit(
+        raw_data["Tempo[s]"], raw_data["RA[deg]"], poly_degree
+    )
+    poly_dec = np.polynomial.polynomial.Polynomial.fit(
+        raw_data["Tempo[s]"], raw_data["DEC[deg]"], poly_degree
+    )
+
+    ra_fit = []
+    dec_fit = []
+    time_utc = []
+    desvio_ra = []
+    desvio_dec = []
+    desvio_ra_deg = []
+    desvio_dec_deg = []
+
+    for index, row in raw_data.iterrows():
+        aux_ra = poly_ra(row["Tempo[s]"])
+        aux_dec = poly_dec(row["Tempo[s]"])
+        aux_t = datetime.fromtimestamp(row["Tempo[s]"])
+        time_utc.append(aux_t)
+        ra_fit.append(aux_ra)
+        dec_fit.append(aux_dec)
+        desvio_ra_deg.append(np.abs(row['RA[deg]']-aux_ra))
+        desvio_dec_deg.append(np.abs(row['DEC[deg]']-aux_dec))
+        desvio_ra.append(100*np.abs((row['RA[deg]']-aux_ra)/row['RA[deg]']))
+        desvio_dec.append(100*np.abs((row['DEC[deg]']-aux_dec)/row['DEC[deg]']))
+
+    dados_fit = {
+        "Tempo (UTC)": raw_data["Tempo (UTC)"],
+        "Tempo[s]": raw_data["Tempo[s]"],
+        "RA[deg]": ra_fit,
+        "DEC[deg]": dec_fit,
+        'Desvio RA (%)': desvio_ra,
+        'Desvio DEC (%)': desvio_dec,
+        'Desvio RA (deg)': desvio_ra_deg,
+        'Desvio DEC (deg)': desvio_dec_deg
+    }
+
+    return (poly_ra, poly_dec, pd.DataFrame(data=dados_fit))
