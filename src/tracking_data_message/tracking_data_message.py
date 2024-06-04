@@ -29,17 +29,17 @@ def get_wcs_from_fits(filename: string, fov_parameter: float = 1.2) -> WCS:
     img_header = hdu_list[0].header
     img_data = hdu_list[0].data
 
-    # Fechando o arquivo
+    # Close the file
     hdu_list.close()
 
-    # Obtenção das 20 estrelas mais brilhantes
+    # Obtaining the 20 brightest stars
     peaks_coordinates = find_peaks(img_data)[0:20]
 
-    # Obtenção do centro da imagem:
+    # Obtaining image center
     ra, dec = img_header['RA'], img_header['DEC']
     center_header = SkyCoord(ra,dec,unit='deg')
 
-    # Obtenção do field of view:
+    # Obtaining field of view
     telescope_focal_length = 400 # mm
     pixel_size = 3.76 # um
     pixel_ratio = 206*pixel_size/telescope_focal_length # 0.66
@@ -47,7 +47,7 @@ def get_wcs_from_fits(filename: string, fov_parameter: float = 1.2) -> WCS:
     shape = img_data.shape
     fov = np.max(shape) * pixel.to(u.deg)
 
-    # Obtendo as estrelas do GAIA
+    # Obtained stars catalogued by GAIA
     all_radecs = gaia_radecs(center_header, fov_parameter * fov, circular = False)
 
     # we only keep stars 0.01 degree apart from each other
@@ -60,13 +60,22 @@ def get_wcs_from_fits(filename: string, fov_parameter: float = 1.2) -> WCS:
 
 
 def get_radec_from_fits(filename:string,output_path:string,wcs:WCS,contour_threshold: float = 3.0):
-    
-    # Open some FITS image
+    '''
+    Calculates the RA and DEC angles for a streak in a FITS image, given a WCS.
+
+    Attributes:
+    filename: File's name
+    output_path: Path of destination file.
+    wcs: WCS of the FITS image
+    contour_threshold: Threshold to identify the streaks in the image.
+    '''
+
+    # Open the FITS image
     image_name = filename
     hdu_list = fits.open(image_name) #Header Data Unit
     img_header = hdu_list[0].header
     
-    #Definição de parâmetros iniciais:
+    #Defining initial parameters
     connectivity_angle = 8.0
 
     # Read a fits image and create a Streak instance.
@@ -76,58 +85,73 @@ def get_radec_from_fits(filename:string,output_path:string,wcs:WCS,contour_thres
         connectivity_angle = connectivity_angle, 
         )
 
-    # Detect streaks.
+    # Detect streaks
     streak.detect()
 
     if len(streak.streaks) > 0:
-        
-
-        satellite_list = streak.streaks
+        # satellite_list = streak.streaks
 
         # Getting DataFrame data
         data = []
-        for satellite in satellite_list:
-            x_min = satellite['x_min']
-            y_min = satellite['y_min']
-            x_max = satellite['x_max']
-            y_max = satellite['y_max']
-            radec_min = wcs.pixel_to_world(x_min,y_min)
-            radec_max = wcs.pixel_to_world(x_max,y_max)
-            ra_min = radec_min.ra.deg
-            ra_max = radec_max.ra.deg
-            dec_min = radec_min.dec.deg
-            dec_max = radec_max.dec.deg
-            m = satellite['slope']
-            theta = satellite['slope_angle']
-            connectivity = satellite['connectivity']
-            n = satellite['intercept']
-            perimeter = satellite['perimeter']
-            shape_factor = satellite['shape_factor']
+        for satellite in streak.streaks:
+            # x_min = satellite['x_min']
+            # y_min = satellite['y_min']
+            # x_max = satellite['x_max']
+            # y_max = satellite['y_max']
+            # radec_min = wcs.pixel_to_world(x_min,y_min)
+            # radec_max = wcs.pixel_to_world(x_max,y_max)
+            # ra_min = radec_min.ra.deg
+            # ra_max = radec_max.ra.deg
+            # dec_min = radec_min.dec.deg
+            # dec_max = radec_max.dec.deg
+            # m = satellite['slope']
+            # theta = satellite['slope_angle']
+            # connectivity = satellite['connectivity']
+            # n = satellite['intercept']
+            # perimeter = satellite['perimeter']
+            # shape_factor = satellite['shape_factor']
 
             new_row = {
                 'Index': satellite['index'],
-                'X_min':x_min,
-                'Y_min':y_min,
-                'X_max':x_max,
-                'Y_max':y_max,
-                'RA_min':ra_min,
-                'RA_max':ra_max,
-                'DEC_min':dec_min,
-                'DEC_max':dec_max,
-                'Coef. Angular':m,
-                'Theta':theta,
-                'Connectivity':connectivity,
-                'Interception': n,
-                'Perimeter': perimeter,
-                'Shape Factor': shape_factor,
-                'Custom Factor': perimeter/shape_factor
+                'X_min':satellite['x_min'],
+                'Y_min':satellite['y_min'],
+                'X_max':satellite['x_max'],
+                'Y_max':satellite['y_max'],
+                'RA_min':wcs.pixel_to_world(satellite['x_min'],satellite['y_min']).ra.deg,
+                'RA_max':wcs.pixel_to_world(satellite['x_max'],satellite['y_max']).ra.deg,
+                'DEC_min':wcs.pixel_to_world(satellite['x_min'],satellite['y_min']).dec.deg,
+                'DEC_max':wcs.pixel_to_world(satellite['x_max'],satellite['y_max']).dec.deg,
+                'Coef. Angular':satellite['slope'],
+                'Theta':satellite['slope_angle'],
+                'Connectivity':satellite['connectivity'],
+                'Interception': satellite['intercept'],
+                'Perimeter': satellite['perimeter'],
+                'Shape Factor': satellite['shape_factor'],
+                'Custom Factor': satellite['perimeter']/satellite['shape_factor']
                 }            
+            # new_row = {
+            #     'Index': satellite['index'],
+            #     'X_min':x_min,
+            #     'Y_min':y_min,
+            #     'X_max':x_max,
+            #     'Y_max':y_max,
+            #     'RA_min':ra_min,
+            #     'RA_max':ra_max,
+            #     'DEC_min':dec_min,
+            #     'DEC_max':dec_max,
+            #     'Coef. Angular':m,
+            #     'Theta':theta,
+            #     'Connectivity':connectivity,
+            #     'Interception': n,
+            #     'Perimeter': perimeter,
+            #     'Shape Factor': shape_factor,
+            #     'Custom Factor': perimeter/shape_factor
+            #     }            
             data.append(new_row)
-
-            # satellites_df = satellites_df._append(new_row, ignore_index=True)
         
         # Creating de DataFrame
-        columns = ['Index','X_min','Y_min','X_max','Y_max','RA_min','RA_max','DEC_min','DEC_max','Coef. Angular','Theta','Connectivity','Interception','Perimeter','Shape Factor','Custom Factor']
+        # columns = ['Index','X_min','Y_min','X_max','Y_max','RA_min','RA_max','DEC_min','DEC_max','Coef. Angular','Theta','Connectivity','Interception','Perimeter','Shape Factor','Custom Factor']
+        columns = list(new_row.keys())
 
         satellites_df = pd.DataFrame(columns=columns,data = data)
 
