@@ -256,7 +256,7 @@ def read_tdm(filename: string) -> pd.DataFrame:
         line = line.replace("\n", "").replace("=", "")
         lines[i] = line
         splitted_line = line.split(" ")
-        time_utc = datetime.strptime(splitted_line[2], "%Y-%m-%dT%H:%M:%S.%f")
+        time_utc = datetime.datetime.strptime(splitted_line[2], "%Y-%m-%dT%H:%M:%S.%f")
         time_seconds = time_utc.timestamp()
         if time_utc_list.count(time_utc) == 0:
             time_utc_list.append(time_utc)
@@ -297,7 +297,7 @@ def fit_radec_tdm_data(raw_data: pd.DataFrame, poly_degree: int):
     for index, row in raw_data.iterrows():
         aux_ra = poly_ra(row["Tempo[s]"])
         aux_dec = poly_dec(row["Tempo[s]"])
-        aux_t = datetime.fromtimestamp(row["Tempo[s]"])
+        aux_t = datetime.datetime.fromtimestamp(row["Tempo[s]"])
         time_utc.append(aux_t)
         ra_fit.append(aux_ra)
         dec_fit.append(aux_dec)
