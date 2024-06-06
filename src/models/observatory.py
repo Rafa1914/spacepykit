@@ -1,9 +1,7 @@
-from src.models.observation import Observation
 from src.orbit.orbit_determination import get_geodetic_latitude, sidereal_time
 import numpy as np
 
 class Observatory():
-    _observations = [Observation]
     def __init__(self,longitude:float,latitude:float,altitude:float) -> None:
         '''
         Constructor of observation's class.
@@ -18,9 +16,6 @@ class Observatory():
         self._altitude = altitude
         self._latitude_geodetic = np.rad2deg(get_geodetic_latitude(latitude))
 
-    def add_observation(self,observation:Observation):
-        observation.sidereal_time = sidereal_time(self._longitude,date=observation.time),
-        self._observations.append(observation)
     
     @property
     def longitude(self) -> float:
