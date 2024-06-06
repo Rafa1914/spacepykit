@@ -278,7 +278,6 @@ def read_tdm(filename: string) -> pd.DataFrame:
 
 
 def fit_radec_tdm_data(raw_data: pd.DataFrame, poly_degree: int):
-    # Interpolação dos dados de 1.2 FOV:
     poly_ra = np.polynomial.polynomial.Polynomial.fit(
         raw_data["Tempo[s]"], raw_data["RA[deg]"], poly_degree
     )
