@@ -11,13 +11,13 @@ from src.astrophotometry.geometry import sparsify
 from src.astride import Streak
 
 
-def get_wcs_from_fits(filename: string, fov_parameter: float = 1.2) -> WCS:
+def get_wcs_from_fits(filename: string, fov_parameter: float = 1.5) -> WCS:
     """
     Calculates the World Coordinate System for a FITS image using plate solving.
 
     Attributes:
     filename: FITS file's name
-    fov_parameter: Multiplicator of FOV (Default is 1.2)
+    fov_parameter: Multiplicator of FOV (Default is 1.5)
     """
 
     # Open some FITS image
@@ -30,7 +30,7 @@ def get_wcs_from_fits(filename: string, fov_parameter: float = 1.2) -> WCS:
     hdu_list.close()
 
     # Obtaining the 20 brightest stars
-    peaks_coordinates = find_peaks(img_data)[0:20]
+    peaks_coordinates = find_peaks(img_data)[0:30]
 
     # Obtaining image center
     ra, dec = img_header["RA"], img_header["DEC"]
@@ -51,7 +51,7 @@ def get_wcs_from_fits(filename: string, fov_parameter: float = 1.2) -> WCS:
     all_radecs = sparsify(all_radecs, 0.01)
 
     # we only keep the 20 brightest stars from gaia
-    wcs = compute_wcs(peaks_coordinates, all_radecs[0:20], tolerance=5)
+    wcs = compute_wcs(peaks_coordinates, all_radecs[0:30], tolerance=5)
     return wcs
 
 
