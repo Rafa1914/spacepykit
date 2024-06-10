@@ -1,4 +1,5 @@
-from src.orbit.orbit_determination import get_geodetic_latitude, sidereal_time
+from src.common.constants import EARTH_OBLATENESS
+# from src.orbit.orbit_determination import get_geodetic_latitude, sidereal_time
 import numpy as np
 
 class Observatory():
@@ -29,3 +30,21 @@ class Observatory():
     @property
     def latitude_geodetic(self) -> float:
         return self._latitude_geodetic
+    
+
+def get_geodetic_latitude(latitude:float) -> float:
+    '''
+    Calculates the geodetic latitude for a given geocentric latitude.
+
+    Reference: Curtis - Orbital Mechanics for Engineering Students
+
+    Attributes:
+    latitude: Latitude location [deg]
+
+    Returns:
+    Returns the geodetic latitude [rad]
+    '''
+    phi = np.deg2rad(latitude)
+    f = EARTH_OBLATENESS
+    geodetic_latitude = np.arctan(np.tan(phi)*(1-f)**2)
+    return geodetic_latitude

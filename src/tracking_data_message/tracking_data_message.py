@@ -276,6 +276,29 @@ def read_tdm(filename: string) -> pd.DataFrame:
     df = pd.DataFrame(data=data)
     return df
 
+def filter_raw_data(df_raw: pd.DataFrame, df_fit=None, applied_filter= None) -> pd.DataFrame:
+    """A method to filter raw data from TDM.
+
+    Args:
+        df_raw (pd.DataFrame): Dataframe containing de raw data obtained from FITS image.
+        df_fit (pd.DataFrame, optional): Dataframe containing a polynomial fit from the raw data. Defaults to None.
+        applied_filter (pd.Series[bool], optional): A filter to be applied to the fit DataFrame. Defaults to None.
+
+    Returns:
+        pd.DataFrame: A Datframe from the raw DataFrame but filtered
+    """
+    if df_fit is None:
+        _, _, df_fit = fit_radec_tdm_data(df_raw, 3)
+    if applied_filter is None:        
+        std_ra = df_fit.describe().loc["std", "Desvio RA (%)"]
+        mean_ra = df_fit.describe().loc["mean", "Desvio RA (%)"]
+        std_dec = df_fit.describe().loc["std", "Desvio DEC (%)"]
+        mean_dec = df_fit.describe().loc["mean", "Desvio DEC (%)"]
+        applied_filter = (abs(df_fit["Desvio RA (%)"] - mean_ra) < 1.0 * std_ra) & (
+            abs(df_fit["Desvio DEC (%)"] - mean_dec) < 1.0 * std_dec
+        )
+    time_filtered = df_fit[applied_filter]["Tempo[s]"]
+    return df_raw.loc[df_raw["Tempo[s]"].isin(time_filtered)]
 
 def fit_radec_tdm_data(raw_data: pd.DataFrame, poly_degree: int):
     poly_ra = np.polynomial.polynomial.Polynomial.fit(
