@@ -4,6 +4,9 @@ from src.orbit.orbit_determination import sidereal_time
 
 
 class Observation:
+    """
+    Class representing the observation made by a optical campaign.
+    """
     def __init__(self, ra: float, dec: float, time_utc: datetime) -> None:
         """
         Constructor of observation's class.
