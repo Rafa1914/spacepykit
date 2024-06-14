@@ -96,6 +96,16 @@ def lagrange_fdot_and_gdot_from_x(x:float,r:float,r0:float,dt:float,alpha:float)
     return (f_dot,g_dot)
 
 def rv_from_r0v0(r0:Vector,v0:Vector,dt:float) -> tuple[Vector,Vector]:
+    """This function computes the state vector (R,V) from the initial state vector (R0,V0) and the elapsed time.
+
+    Args:
+        r0 (Vector): Initial position vector
+        v0 (Vector): Initial velocity vector
+        dt (float): Elapsed time [s]
+
+    Returns:
+        tuple[Vector,Vector]: State vector resultant
+    """
     vr = find_projection(v0,r0)
     alpha = 2/r0.magnitude - dot_product(v0,v0)/EARTH_GRAVITATIONAL_PARAMETER
     x = find_universal_anomaly(dt,r0.magnitude,vr,alpha)
