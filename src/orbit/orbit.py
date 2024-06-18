@@ -189,3 +189,58 @@ def read_ephemeris(filepath: str) -> pd.DataFrame:
         }
     )
     return df
+
+def interpolate_ephemeris(ephemeris_df:pd.DataFrame,time_utc:list) -> pd.DataFrame:
+    """Interpolate an ephemeris dataframe into desired times in UTC format
+
+    Args:
+        ephemeris_df (pd.DataFrame): Original dataframe withou interpolation
+        time_utc (list): Time to perform the interpolation in UTC
+
+    Returns:
+        pd.DataFrame: The resultant dataframe
+    """
+    r, v = [],[]
+
+    for index, t in enumerate(time_utc):
+        # Getting the highest time from Dataframe lesser than iteration time:
+        base_row = ephemeris_df[ephemeris_df["Time [UTC]"] <= t].tail(1)
+        dt = (t - base_row["Time [UTC]"].values[0]).total_seconds()
+
+        # Getting the base values for interpolation
+        r0 = Vector(
+            base_row["Rx [km]"].values[0],
+            base_row["Ry [km]"].values[0],
+            base_row["Rz [km]"].values[0],
+        )
+        v0 = Vector(
+            base_row["Vx [km/s]"].values[0],
+            base_row["Vy [km/s]"].values[0],
+            base_row["Vz [km/s]"].values[0],
+        )
+
+        # Interpolation
+        if dt != 0:
+            r_aux, v_aux = rv_from_r0v0(r0, v0, dt)
+        else:
+            r_aux,v_aux = r0,v0        
+        
+        # Getting results
+        r.append(r_aux)
+        v.append(v_aux)
+
+    # Creating the dataframe
+    df = pd.DataFrame(
+        data={
+            "Time [s]": map(lambda t: (t-time_utc[0]).total_seconds(),time_utc),
+            "Time [UTC]": time_utc,
+            "Rx [km]": map(lambda r: r.x, r),
+            "Ry [km]": map(lambda r: r.y, r),
+            "Rz [km]": map(lambda r: r.z, r),
+            "Vx [km/s]": map(lambda v: v.x, v),
+            "Vy [km/s]": map(lambda v: v.y, v),
+            "Vz [km/s]": map(lambda v: v.z, v),
+        }
+    )
+    
+    return df
