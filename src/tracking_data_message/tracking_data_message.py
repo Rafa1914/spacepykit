@@ -276,7 +276,10 @@ def read_tdm(filename: string) -> pd.DataFrame:
     df = pd.DataFrame(data=data)
     return df
 
-def filter_raw_data(df_raw: pd.DataFrame, df_fit=None, applied_filter= None) -> pd.DataFrame:
+
+def filter_raw_data(
+    df_raw: pd.DataFrame, df_fit=None, applied_filter=None
+) -> pd.DataFrame:
     """A method to filter raw data from TDM.
 
     Args:
@@ -289,18 +292,28 @@ def filter_raw_data(df_raw: pd.DataFrame, df_fit=None, applied_filter= None) -> 
     """
     if df_fit is None:
         _, _, df_fit = fit_radec_tdm_data(df_raw, 3)
-    if applied_filter is None:        
-        std_ra = df_fit.describe().loc["std", "Desvio RA (%)"]
-        mean_ra = df_fit.describe().loc["mean", "Desvio RA (%)"]
-        std_dec = df_fit.describe().loc["std", "Desvio DEC (%)"]
-        mean_dec = df_fit.describe().loc["mean", "Desvio DEC (%)"]
-        applied_filter = (abs(df_fit["Desvio RA (%)"] - mean_ra) < 1.0 * std_ra) & (
-            abs(df_fit["Desvio DEC (%)"] - mean_dec) < 1.0 * std_dec
+    if applied_filter is None:
+        std_ra = df_fit.describe().loc["std", "Desvio RA (deg)"]
+        mean_ra = df_fit.describe().loc["mean", "Desvio RA (deg)"]
+        std_dec = df_fit.describe().loc["std", "Desvio DEC (deg)"]
+        mean_dec = df_fit.describe().loc["mean", "Desvio DEC (deg)"]
+        applied_filter = (abs(df_fit["Desvio RA (deg)"] - mean_ra) < 0.675 * std_ra) & (
+            abs(df_fit["Desvio DEC (deg)"] - mean_dec) < 0.675 * std_dec
         )
     time_filtered = df_fit[applied_filter]["Tempo[s]"]
     return df_raw.loc[df_raw["Tempo[s]"].isin(time_filtered)]
 
+
 def fit_radec_tdm_data(raw_data: pd.DataFrame, poly_degree: int):
+    """Obtains a polynomial to fit the ra and dec data.
+
+    Args:
+        raw_data (pd.DataFrame): Raw RA and DEC data.
+        poly_degree (int): Degree of the polynomial to be obtained
+
+    Returns:
+        poly_ra,poly_dec,df_fit: Returns the polynomials obtained and the fit data.
+    """
     poly_ra = np.polynomial.polynomial.Polynomial.fit(
         raw_data["Tempo[s]"], raw_data["RA[deg]"], poly_degree
     )
@@ -308,35 +321,33 @@ def fit_radec_tdm_data(raw_data: pd.DataFrame, poly_degree: int):
         raw_data["Tempo[s]"], raw_data["DEC[deg]"], poly_degree
     )
 
-    ra_fit = []
-    dec_fit = []
-    time_utc = []
-    desvio_ra = []
-    desvio_dec = []
-    desvio_ra_deg = []
-    desvio_dec_deg = []
-
-    for index, row in raw_data.iterrows():
-        aux_ra = poly_ra(row["Tempo[s]"])
-        aux_dec = poly_dec(row["Tempo[s]"])
-        aux_t = datetime.datetime.fromtimestamp(row["Tempo[s]"])
-        time_utc.append(aux_t)
-        ra_fit.append(aux_ra)
-        dec_fit.append(aux_dec)
-        desvio_ra_deg.append(np.abs(row['RA[deg]']-aux_ra))
-        desvio_dec_deg.append(np.abs(row['DEC[deg]']-aux_dec))
-        desvio_ra.append(100*np.abs((row['RA[deg]']-aux_ra)/row['RA[deg]']))
-        desvio_dec.append(100*np.abs((row['DEC[deg]']-aux_dec)/row['DEC[deg]']))
-
     dados_fit = {
         "Tempo (UTC)": raw_data["Tempo (UTC)"],
         "Tempo[s]": raw_data["Tempo[s]"],
-        "RA[deg]": ra_fit,
-        "DEC[deg]": dec_fit,
-        'Desvio RA (%)': desvio_ra,
-        'Desvio DEC (%)': desvio_dec,
-        'Desvio RA (deg)': desvio_ra_deg,
-        'Desvio DEC (deg)': desvio_dec_deg
+        "RA[deg]": map(lambda row: poly_ra(row[1]["Tempo[s]"]), raw_data.iterrows()),
+        "DEC[deg]": map(lambda row: poly_dec(row[1]["Tempo[s]"]), raw_data.iterrows()),
+        "Desvio RA (%)": map(
+            lambda row: 100
+            * np.abs(
+                (row[1]["RA[deg]"] - poly_ra(row[1]["Tempo[s]"])) / row[1]["RA[deg]"]
+            ),
+            raw_data.iterrows(),
+        ),
+        "Desvio DEC (%)": map(
+            lambda row: 100
+            * np.abs(
+                (row[1]["DEC[deg]"] - poly_dec(row[1]["Tempo[s]"])) / row[1]["DEC[deg]"]
+            ),
+            raw_data.iterrows(),
+        ),
+        "Desvio RA (deg)": map(
+            lambda row: np.abs(row[1]["RA[deg]"] - poly_ra(row[1]["Tempo[s]"])),
+            raw_data.iterrows(),
+        ),
+        "Desvio DEC (deg)": map(
+            lambda row: np.abs(row[1]["DEC[deg]"] - poly_dec(row[1]["Tempo[s]"])),
+            raw_data.iterrows(),
+        ),
     }
 
     return (poly_ra, poly_dec, pd.DataFrame(data=dados_fit))
