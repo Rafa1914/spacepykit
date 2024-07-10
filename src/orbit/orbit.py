@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import datetime
 
+
 def stumpff_S(z: float) -> float:
     """
     Calculates de Stumpff function S(z).
@@ -190,20 +191,22 @@ def read_ephemeris(filepath: str) -> pd.DataFrame:
     )
     return df
 
-def interpolate_ephemeris(ephemeris_df:pd.DataFrame,time_utc:list) -> pd.DataFrame:
-    """Interpolate an ephemeris dataframe into desired times in UTC format
+
+def interpolate_ephemeris(ephemeris_df: pd.DataFrame, time_utc: list) -> pd.DataFrame:
+    """
+    Interpolate an ephemeris dataframe into desired times in UTC format.
 
     Args:
-        ephemeris_df (pd.DataFrame): Original dataframe withou interpolation
-        time_utc (list): Time to perform the interpolation in UTC
+        ephemeris_df (pd.DataFrame): The original dataframe without interpolation.
+        time_utc (list): The times to perform the interpolation in UTC format.
 
     Returns:
-        pd.DataFrame: The resultant dataframe
+        pd.DataFrame: The resultant dataframe with interpolated values.
     """
-    r, v = [],[]
+    r, v = [], []
 
     for index, t in enumerate(time_utc):
-        # Getting the highest time from Dataframe lesser than iteration time:
+        # Getting the highest time from the dataframe that is less than or equal to the iteration time:
         base_row = ephemeris_df[ephemeris_df["Time [UTC]"] <= t].tail(1)
         dt = (t - base_row["Time [UTC]"].values[0]).total_seconds()
 
@@ -223,8 +226,8 @@ def interpolate_ephemeris(ephemeris_df:pd.DataFrame,time_utc:list) -> pd.DataFra
         if dt != 0:
             r_aux, v_aux = rv_from_r0v0(r0, v0, dt)
         else:
-            r_aux,v_aux = r0,v0        
-        
+            r_aux, v_aux = r0, v0
+
         # Getting results
         r.append(r_aux)
         v.append(v_aux)
@@ -232,7 +235,7 @@ def interpolate_ephemeris(ephemeris_df:pd.DataFrame,time_utc:list) -> pd.DataFra
     # Creating the dataframe
     df = pd.DataFrame(
         data={
-            "Time [s]": map(lambda t: (t-time_utc[0]).total_seconds(),time_utc),
+            "Time [s]": map(lambda t: (t - time_utc[0]).total_seconds(), time_utc),
             "Time [UTC]": time_utc,
             "Rx [km]": map(lambda r: r.x, r),
             "Ry [km]": map(lambda r: r.y, r),
@@ -242,5 +245,5 @@ def interpolate_ephemeris(ephemeris_df:pd.DataFrame,time_utc:list) -> pd.DataFra
             "Vz [km/s]": map(lambda v: v.z, v),
         }
     )
-    
+
     return df
